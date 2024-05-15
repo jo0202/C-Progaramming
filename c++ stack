@@ -1,0 +1,164 @@
+#include <iostream>
+#include <stack>
+#include <string>
+#include <cctype> 
+
+using namespace std;
+
+class Calculator {
+public:
+    double evaluate(string expression);
+
+private:
+    // 연산자 우선순위를 반환하는 함수
+    int priority(char op);
+
+    // 연산 수행 함수
+    double Calculation(char op, double op1, double op2);
+};
+
+// 연산자 우선순위를 반환
+int Calculator::priority(char op) {
+    if (op == '+' || op == '-') return 1;
+    if (op == '*' || op == '/') return 2;
+    return 0;
+}
+
+
+double Calculator::Calculation(char op, double op1, double op2) {
+    switch (op) {
+    case '+': return op1 + op2;
+    case '-': return op1 - op2;
+    case '*': return op1 * op2;
+    case '/': return op1 / op2;
+    default: return 0.0;
+    }
+}
+
+
+double Calculator::evaluate(string expression) {
+    stack<double> op_stack; // 숫자 스택
+    stack<char> ops_stack; // 연산자 스택
+
+
+    for (char& str : expression) {
+        if (isdigit(str)) { // 숫자인지 확인 후 숫자라면 피연산자로 생각하고 op_Stack 에 push
+            op_stack.push(str - '0');
+        }
+        else if (str == '(') {
+            ops_stack.push(str);
+        }
+        else if (str == ')') {
+
+            while (!ops_stack.empty() && ops_stack.top() != '(') {
+                char op = ops_stack.top();
+                ops_stack.pop();
+                double op2 = op_stack.top();
+                op_stack.pop();
+                double op1 = op_stack.top();
+                op_stack.pop();
+                op_stack.push(Calculation(op, op1, op2));
+            }
+            ops_stack.pop(); // '(' 제거
+        }
+        else if (str == '+' || str == '-' || str == '*' || str == '/') { // 연산자인 경우
+            // 현재 연산자의 우선순위와 스택의 연산자 우선순위를 비교하여 연산 수행
+            while (!ops_stack.empty() && priority(ops_stack.top()) >= priority(str)) {
+                char op = ops_stack.top();
+                ops_stack.pop();
+                double op2 = op_stack.top();
+                op_stack.pop();
+                double op1 = op_stack.top();
+                op_stack.pop();
+                op_stack.push(Calculation(op, op1, op2));
+            }
+            ops_stack.push(str); // 현재 연산자 스택에 삽입
+        }
+    }
+
+    // 스택에 남은 연산자들에 대한 연산 수행
+    while (!ops_stack.empty()) {
+        char op = ops_stack.top();
+        ops_stack.pop();
+        double op2 = op_stack.top();
+        op_stack.pop();
+        double op1 = op_stack.top();
+        op_stack.pop();
+        op_stack.push(Calculation(op, op1, op2));
+    }
+
+    return op_stack.top();
+}
+
+int main() {
+    string expression;
+    cout << "=식을 입력하시오(예: 4+3*3/2) ";
+    getline(cin, expression);
+
+    Calculator calculator;
+    double apply = calculator.evaluate(expression);
+    cout << "연산자 우선순위 적용 값: " << apply << endl;
+
+    double not_apply = 0;
+    char start = '+'; // 시작 연산자 초기화
+    size_t startIndex = 0; // 수식 탐색을 위한 시작 인덱스 초기화
+    int priority = 0; // 연산자 우선순위 초기화
+
+
+    while (true) {
+        size_t fIndex = expression.find_first_of("+-*/", startIndex);
+        if (fIndex == string::npos) {
+            string part = expression.substr(startIndex);
+            if (!part.empty()) {
+                double num = stod(part);
+                switch (start) {
+                case '+': not_apply += num; break;
+                case '-': not_apply -= num; break;
+                case '*': not_apply *= num; break;
+                case '/': not_apply /= num; break;
+                }
+            }
+            break;
+        }
+
+
+        string part = expression.substr(startIndex, fIndex - startIndex);
+        double num = stod(part);
+
+        // 현재 연산자의 우선순위 결정
+        switch (expression[fIndex]) {
+        case '*':
+        case '/':
+            priority = 1;
+            break;
+        case '+':
+        case '-':
+            priority = 2;
+            break;
+        }
+
+        // 우선순위에 따라 연산 수행
+        if (priority == 1) {
+            switch (start) {
+            case '+': not_apply += num; break;
+            case '-': not_apply -= num; break;
+            case '*': not_apply *= num; break;
+            case '/': not_apply /= num; break;
+            }
+        }
+        else {
+            switch (start) {
+            case '+': not_apply += num; break;
+            case '-': not_apply -= num; break;
+            }
+        }
+
+        // 다음 연산자 및 시작 인덱스 설정
+        start = expression[fIndex];
+        startIndex = fIndex + 1;
+    }
+
+    cout << "연산자 우선순위 미적용 값: " << not_apply << endl;
+
+    return 0;
+}
